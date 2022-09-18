@@ -1,0 +1,50 @@
+version: "3"
+services:
+
+  jenkins-docker:
+    container_name: jenkins-docker
+    image: docker:dind
+    privileged: true
+    environment:
+      - DOCKER_TLS_CERTDIR=/certs
+    volumes:
+      - jenkins-docker-certs:/certs/client
+      - jenkins-data:/var/jenkins_home
+    ports:
+      - "2376:2376"
+      - "3000:3000"
+    networks:
+      jenkins:
+        aliases: 
+          - docker
+
+  jenkins-ui:
+    container_name: jenkins-ui
+    image: jenkinsci/blueocean
+    depends_on:
+      - jenkins-docker
+    environment:
+      - DOCKER_HOST=tcp://docker:2376
+      - DOCKER_CERT_PATH=/certs/client
+      - DOCKER_TLS_VERIFY=1
+      - JAVA_OPTS="-Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true"
+    ports:
+      - "49000:8080"
+      - "50000:50000"
+    networks:
+      - jenkins
+    volumes:
+      - jenkins-data:/var/jenkins_home
+      - jenkins-docker-certs:/certs/client:ro
+      - $HOME:/home
+    restart: on-failure
+
+volumes:
+  jenkins-docker-certs:
+    driver: local
+  jenkins-data:
+    driver: local
+
+networks:
+  jenkins:
+    driver: bridge
